@@ -1,0 +1,17 @@
+# Entorno virtual
+.venv/
+
+# Archivos de VSCode
+.vscode/
+
+# __pycache__
+__pycache__/
+
+# Datos generados
+output/
+logs/
+
+# Archivos temporales
+*.pyc
+*.pyo
+*.DS_Store
