@@ -1,6 +1,8 @@
 from __future__ import annotations
 from pathlib import Path
 
+import pandas as pd
+
 from ..data.loader import load_csv
 from ..validation.holdout import holdout_split
 from ..models.euclidean import EuclideanClassifier
@@ -45,7 +47,10 @@ def run_holdout_euclidean(
     IR_THRESHOLD = 1.5
 
     if ir_train <= IR_THRESHOLD:
-        print("Conjunto de ENTRENAMIENTO BALANCEADO (IR ≤ 1.5). Es razonable usar accuracy.")
+        print(
+            "Conjunto de ENTRENAMIENTO BALANCEADO (IR ≤ 1.5). "
+            "Es razonable usar accuracy."
+        )
     else:
         print(
             "Conjunto de ENTRENAMIENTO DESBALANCEADO (IR > 1.5). "
@@ -56,42 +61,116 @@ def run_holdout_euclidean(
     clf = EuclideanClassifier()
     clf.fit(X_train, y_train)
 
-    # 6. Decidir si calculamos accuracy según IR de TRAIN
+    # 6. Predecir SIEMPRE (aunque luego no usemos accuracy si hay desbalanceo)
+    y_pred = clf.predict(X_test)
+
+    # 6.1 Conteo de aciertos y errores
+    correct_mask = (y_test.values == y_pred)
+    n_total = len(y_test)
+    n_correct = int(correct_mask.sum())
+    n_errors = int(n_total - n_correct)
+
+    print(f"\nTotal patrones TEST: {n_total}")
+    print(f"Aciertos (predicción correcta): {n_correct}")
+    print(f"Errores  (predicción incorrecta): {n_errors}")
+
+    # 6.2 Matriz de confusión (filas = clase real, columnas = clase predicha)
+    confusion_df = pd.crosstab(
+        pd.Series(y_test.values, name="Real"),
+        pd.Series(y_pred, name="Predicha"),
+        dropna=False,
+    )
+
+    print("\nMatriz de confusión (filas = clase real, columnas = clase predicha):")
+    print(confusion_df)
+
+    # 7. Decidir si calculamos accuracy según IR de TRAIN
     acc: float | None = None
     if ir_train <= IR_THRESHOLD:
-        y_pred = clf.predict(X_test)
         acc = accuracy(y_test, y_pred)
         print(f"\nAccuracy, clasificador Euclidiano (hold-out): {acc:.4f}")
     else:
         print(
-            "\nNo se reporta accuracy porque el conjunto de entrenamiento está desbalanceado "
-            f"(IR_train = {ir_train:.4f} > {IR_THRESHOLD})."
+            "\nNo se reporta accuracy porque el conjunto de entrenamiento "
+            f"está desbalanceado (IR_train = {ir_train:.4f} > {IR_THRESHOLD})."
         )
 
     print(f"Semilla usada: {used_seed}")
 
-    # 7. Guardar resultados simples a texto
+    # 8. Imprimir tabla de centroides en consola
+    print("\nCentroides por clase (promedios en el espacio de características):")
+    for cls, centroid in clf.class_means_.items():
+        print(f"Clase {cls}: {centroid}")
+
+    # 9. Calcular distancias de cada patrón de TEST a cada centroide
+    dist_info = clf.distances_to_centroids(X_test)
+    dist_matrix = dist_info["distances"]   # (N_test, n_clases)
+    centroid_classes = dist_info["classes"]
+
+    print("\nDistancias de cada patrón de TEST a cada centroide:")
+    header = (
+        "Patrón | Clase Real | "
+        + " | ".join([f"Dist a clase {c}" for c in centroid_classes])
+        + " | Clase Asignada | Resultado"
+    )
+
+    print(header)
+
+    for idx in range(len(X_test)):
+        real_class = y_test.iloc[idx]
+        assigned = y_pred[idx]
+        dist_list = [f"{dist_matrix[idx, j]:.4f}" for j in range(len(centroid_classes))]
+        dist_str = " | ".join(dist_list)
+        resultado = "ACIERTO" if assigned == real_class else "ERROR"
+        print(f"{idx:6d} | {real_class:10} | {dist_str} | {assigned:15} | {resultado}")
+
+
+    # 10. Guardar resultados en archivos (texto + CSVs) 
     resultados_dir = Path("output/euclidean")
     resultados_dir.mkdir(parents=True, exist_ok=True)
 
+    # Calcular porcentaje de test de manera similar al holdout
     if isinstance(test_size, float):
         test_pct = int(round(test_size * 100))
     else:
         total = len(train_df) + len(test_df)
         test_pct = int(round(len(test_df) * 100 / total))
 
-    results_filename = (
-        f"{timestamp}_{dataset_resolved}_seed{used_seed}_test{test_pct}_euclidean.txt"
-    )
-    results_path = resultados_dir / results_filename
+    base_name = dataset_resolved
 
-    with open(results_path, "w", encoding="utf-8") as f:
+    # Archivos:
+    # - resumen (txt)
+    # - centroides (csv)
+    # - distancias (csv)
+    # - matriz de confusión (csv)
+    results_txt_path = (
+        resultados_dir
+        / f"{timestamp}_{base_name}_seed{used_seed}_test{test_pct}_euclidean.txt"
+    )
+    centroids_csv_path = (
+        resultados_dir
+        / f"{timestamp}_{base_name}_seed{used_seed}_test{test_pct}_euclidean_centroides.csv"
+    )
+    distances_csv_path = (
+        resultados_dir
+        / f"{timestamp}_{base_name}_seed{used_seed}_test{test_pct}_euclidean_distancias.csv"
+    )
+    confusion_csv_path = (
+        resultados_dir
+        / f"{timestamp}_{base_name}_seed{used_seed}_test{test_pct}_euclidean_confusion.csv"
+    )
+
+    # 10.1 Guardar resumen en TXT
+    with open(results_txt_path, "w", encoding="utf-8") as f:
         f.write(f"Dataset: {dataset_resolved}\n")
         f.write(f"Target: {target_col}\n")
         f.write(f"Validación: hold-out (test_size={test_size})\n")
         f.write(f"Semilla: {used_seed}\n")
         f.write(f"IR en TRAIN (Imbalance Ratio): {ir_train:.4f}\n")
         f.write("Criterio: IR ≤ 1.5 -> balanceado, IR > 1.5 -> desbalanceado\n")
+        f.write(f"Total patrones TEST: {n_total}\n")
+        f.write(f"Aciertos: {n_correct}\n")
+        f.write(f"Errores: {n_errors}\n")
 
         if acc is not None:
             f.write(f"Accuracy: {acc:.4f}\n")
@@ -101,4 +180,53 @@ def run_holdout_euclidean(
                 "(IR_train > 1.5), por lo que no es razonable usar solo accuracy.\n"
             )
 
-    print(f"\nResultados guardados en: {results_path}")
+        f.write("\nMatriz de confusión (filas = clase real, columnas = clase predicha):\n")
+        f.write(confusion_df.to_string())
+        f.write("\n")
+
+    # 10.2 Guardar centroides en CSV
+    centroid_rows = []
+    for cls, centroid in clf.class_means_.items():
+        row = {"class": cls}
+        for feat_name, value in zip(X_train.columns, centroid):
+            row[str(feat_name)] = value
+        centroid_rows.append(row)
+
+    centroids_df = pd.DataFrame(centroid_rows)
+    centroids_df.to_csv(centroids_csv_path, index=False)
+
+    # 10.3 Guardar distancias por patrón de TEST en CSV
+    dist_rows = []
+    for idx in range(len(X_test)):
+        true_c = y_test.iloc[idx]
+        assigned = y_pred[idx]
+
+        row = {
+            "index": idx,
+            "true_class": true_c,
+     }
+
+        # Distancias a cada centroide
+        for j, c in enumerate(centroid_classes):
+            row[f"dist_to_class_{c}"] = dist_matrix[idx, j]
+
+        # Clase predicha
+        row["assigned_class"] = assigned
+
+        # ACIERTO / ERROR
+        row["resultado"] = "ACIERTO" if assigned == true_c else "ERROR"
+
+        dist_rows.append(row)
+
+    distances_df = pd.DataFrame(dist_rows)
+    distances_df.to_csv(distances_csv_path, index=False)
+
+
+    # 10.4 Guardar matriz de confusión en CSV
+    confusion_df.to_csv(confusion_csv_path)
+
+    print("\nResultados guardados en:")
+    print(f"  Resumen TXT:              {results_txt_path}")
+    print(f"  Centroides CSV:           {centroids_csv_path}")
+    print(f"  Distancias CSV:           {distances_csv_path}")
+    print(f"  Matriz de confusión CSV:  {confusion_csv_path}")
