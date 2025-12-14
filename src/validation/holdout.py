@@ -3,8 +3,9 @@ import pandas as pd
 import random
 import os
 from datetime import datetime
-from sklearn.model_selection import train_test_split
 from collections import Counter
+import numpy as np
+
 
 def holdout_split(
     df: pd.DataFrame,
@@ -16,9 +17,11 @@ def holdout_split(
     save: bool = True,
 ):
     """
-    Realiza Hold-Out estratificado sobre un DataFrame.
+    Realiza Hold-Out estratificado manual sobre un DataFrame.
+    Para cada clase c calcula:
+        n_train_c = round((1 - test_size) * n_c)
+    y garantiza que haya al menos 1 patrón de cada clase en TRAIN y en TEST.
     Devuelve train_df, test_df, la semilla usada y el timestamp de la corrida.
-    Si save=True y output_dir no es None, guarda los CSVs de train/test.
     """
 
     if target_col not in df.columns:
@@ -34,34 +37,52 @@ def holdout_split(
     else:
         print(f"Semilla fija utilizada: {random_state}")
 
-    X = df.drop(columns=[target_col])
-    y = df[target_col]
+    rng = np.random.default_rng(random_state)
 
+    y = df[target_col]
     print("\nDistribución original de clases:", Counter(y))
 
-    X_train, X_test, y_train, y_test = train_test_split(
-        X,
-        y,
-        test_size=test_size,
-        stratify=y,
-        random_state=random_state
-    )
+    train_indices: list[int] = []
+    test_indices: list[int] = []
 
-    print("\nDistribución TRAIN:", Counter(y_train))
-    print("Distribución TEST:", Counter(y_test))
+    train_frac = 1.0 - float(test_size)
 
-    train_df = X_train.copy()
-    train_df[target_col] = y_train
+    # Estratificación manual
+    for cls in sorted(y.unique()):
+        cls_mask = (y == cls)
+        cls_idx = np.flatnonzero(cls_mask)  # índices de esa clase
+        n_c = len(cls_idx)
 
-    test_df = X_test.copy()
-    test_df[target_col] = y_test
+        # cálculo con redondeo por clase
+        n_train_c = int(round(train_frac * n_c))
 
-    # Timestamp único de esta corrida (se usa tanto en CSV como en resultados)
+        # aseguramos que haya al menos 1 patrón en TRAIN y 1 en TEST
+        if n_train_c <= 0:
+            n_train_c = 1
+        if n_train_c >= n_c:
+            n_train_c = n_c - 1
+
+        rng.shuffle(cls_idx)
+        cls_train_idx = cls_idx[:n_train_c]
+        cls_test_idx = cls_idx[n_train_c:]
+
+        train_indices.extend(cls_train_idx.tolist())
+        test_indices.extend(cls_test_idx.tolist())
+
+    # Creamos los DataFrames finales
+    train_df = df.iloc[train_indices].reset_index(drop=True)
+    test_df = df.iloc[test_indices].reset_index(drop=True)
+
+    print("\nDistribución TRAIN:", Counter(train_df[target_col]))
+    print("Distribución TEST:", Counter(test_df[target_col]))
+
+    # Timestamp único
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
     if save and output_dir is not None:
         os.makedirs(output_dir, exist_ok=True)
 
+        # porcentaje de TEST (por si algún día usas test_size como entero)
         if isinstance(test_size, float):
             test_pct = int(round(test_size * 100))
         else:
