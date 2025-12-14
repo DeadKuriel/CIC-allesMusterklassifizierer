@@ -6,13 +6,17 @@ import pandas as pd
 
 from ..data.loader import load_csv
 from ..validation.holdout import holdout_split
-from ..models.euclidean import EuclideanClassifier
+# from ..models.euclidean import EuclideanClassifier
 from ..metrics.classification import accuracy, imbalance_ratio
 from ..metrics.confusion_utils import (
     compute_confusion_matrices,
     binary_metrics_from_cm,
 )
 
+from ..models.registry import make_model, list_models
+
+# print("Modelos:", list_models())
+# clf = make_model("euclidean")
 
 def run_holdout_euclidean(
     dataset_name: str,
@@ -63,7 +67,9 @@ def run_holdout_euclidean(
         )
 
     # 5. Entrenar clasificador euclidiano
-    clf = EuclideanClassifier()
+    from ..models.registry import make_model
+    clf = make_model("euclidean")
+
     clf.fit(X_train, y_train)
 
     # 6. Predecir SIEMPRE (aunque luego no usemos accuracy si hay desbalanceo)
