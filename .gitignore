@@ -1,17 +1,37 @@
-# Entorno virtual
+# Python / Entornos
 .venv/
-
-# Archivos de VSCode
-.vscode/
-
-# __pycache__
+venv/
+env/
 __pycache__/
-
-# Datos generados
-output/
-logs/
-
-# Archivos temporales
-*.pyc
+*.py[cod]
 *.pyo
-*.DS_Store
+
+# Packaging / Build
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# IDEs / Editores
+.vscode/
+.idea/
+*.swp
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# =========================
+# Resultados generados (experimentos)
+# =========================
+outputs/*
+!outputs/.gitkeep
+
+# =========================
+# Logs
+# =========================
+logs/
+*.log
+
+# Notebooks (por agregar)
+.ipynb_checkpoints/

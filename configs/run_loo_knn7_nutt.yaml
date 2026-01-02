@@ -1,0 +1,14 @@
+run_name: nutt_loo_knn7
+io:
+  dataset: input/nutt.csv
+  target_col: class
+  drop_cols: []
+validation:
+  type: loo
+classifier:
+  type: knn
+  params:
+    k: 7
+    distance: euclidean
+report:
+  confusion_matrix_display: true

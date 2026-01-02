@@ -1,0 +1,19 @@
+run_name: run_kfold_knn_example
+io:
+  dataset: input/haberman_58.csv
+  target_col: class
+  drop_cols: []
+validation:
+  type: kfold
+  params:
+    n_splits: 5
+    seed: 42
+    shuffle: true
+    stratify: true
+classifier:
+  type: knn
+  params:
+    k: 3
+    distance: euclidean
+report:
+  confusion_matrix_display: true

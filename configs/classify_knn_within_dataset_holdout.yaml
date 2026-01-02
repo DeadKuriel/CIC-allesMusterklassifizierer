@@ -1,0 +1,20 @@
+run_name: classify_knn_dataset_holdout_example
+io:
+  dataset: input/haberman_58.csv
+  target_col: class
+  drop_cols: []
+mode:
+  type: dataset_split
+  split:
+    type: holdout
+    params:
+      test_size: 0.25
+      seed: 7
+      stratify: true
+classifier:
+  type: knn
+  params:
+    k: 5
+    distance: euclidean # euclidean | manhattan | chebyshev
+report:
+  confusion_matrix_display: true
