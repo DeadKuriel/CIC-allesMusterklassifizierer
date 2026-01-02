@@ -1,0 +1,21 @@
+run_name: electricity_loo_knn53_minkowski_p7
+
+io:
+  dataset: input/Electricity.csv
+  target_col: class
+  drop_cols: []
+
+validation:
+  type: loo
+
+classifier:
+  type: knn
+  params:
+    k: 53
+    distance:
+      type: minkowski
+      params:
+        p: 7
+
+report:
+  confusion_matrix_display: true
