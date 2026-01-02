@@ -1,0 +1,15 @@
+run_name: run_loo_1nn_example
+io:
+  dataset: input/nutt.csv
+  target_col: class
+  drop_cols: []
+validation:
+  type: loo
+  params: {}
+classifier:
+  type: knn
+  params:
+    k: 1
+    distance: euclidean
+report:
+  confusion_matrix_display: true

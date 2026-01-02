@@ -1,0 +1,18 @@
+run_name: run_holdout_knn_example
+io:
+  dataset: input/haberman_58.csv
+  target_col: class
+  drop_cols: []
+validation:
+  type: holdout
+  params:
+    test_size: 0.2
+    seed: 42
+    stratify: true
+classifier:
+  type: knn
+  params:
+    k: 7
+    distance: manhattan
+report:
+  confusion_matrix_display: true

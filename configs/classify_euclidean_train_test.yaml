@@ -1,0 +1,11 @@
+run_name: classify_euclidean_train_test_example
+io:
+  train_dataset: input/train.csv
+  test_dataset: input/test.csv
+  target_col: class
+  drop_cols: []
+classifier:
+  type: euclidiano
+  params: {}
+report:
+  confusion_matrix_display: true

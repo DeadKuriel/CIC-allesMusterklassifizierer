@@ -1,0 +1,11 @@
+run_name: validate_holdout_example
+io:
+  dataset: input/haberman_58.csv
+  target_col: class
+  drop_cols: [] # ejemplo: ["id", "timestamp"]
+validation:
+  type: holdout
+  params:
+    test_size: 0.2
+    seed: 42
+    stratify: true
