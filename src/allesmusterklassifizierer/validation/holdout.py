@@ -69,6 +69,7 @@ class HoldoutSplitter:
             return 0 if m == 1 else m - 1
 
         i = 0
+        stalled = 0
         while diff != 0 and desired:
             c, cls_idx, k = desired[i]
             m = cls_idx.size
@@ -76,11 +77,21 @@ class HoldoutSplitter:
                 if k < max_k(m):
                     desired[i][2] += 1
                     diff -= 1
+                    stalled = 0
+                else:
+                    stalled += 1
             else:
                 if k > min_k(m):
                     desired[i][2] -= 1
                     diff += 1
+                    stalled = 0
+                else:
+                    stalled += 1
             i = (i + 1) % len(desired)
+            if stalled >= len(desired):
+                raise ValidationError(
+                    "Holdout estratificado no factible con clases singleton/test_size."
+                )
 
         for c, cls_idx, k in desired:
             perm = rng.permutation(cls_idx)

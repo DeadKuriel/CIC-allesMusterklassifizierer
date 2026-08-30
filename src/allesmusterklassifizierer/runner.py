@@ -177,6 +177,8 @@ def classify_only(cfg: Dict[str, Any], outputs_dir: str = "outputs") -> RunPaths
     if train_path and test_path:
         train_ds = load_csv_dataset(str(train_path), target_col=target_col, drop_cols=drop_cols)
         test_ds = load_csv_dataset(str(test_path), target_col=target_col, drop_cols=drop_cols)
+        if train_ds.feature_names != test_ds.feature_names:
+            raise ConfigError(f"Esquema train/test incompatible: train={train_ds.feature_names}, test={test_ds.feature_names}")
         _run_single_split(
             cfg=cfg,
             paths=paths,

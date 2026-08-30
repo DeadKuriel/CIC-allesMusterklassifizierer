@@ -40,7 +40,6 @@ class EuclideanCentroidClassifier:
         if X.ndim != 2:
             raise ClassifierError("X debe ser 2D.")
 
-        C = len(self.classes_)
         n = X.shape[0]
         preds = np.empty(n, dtype=object)
 

@@ -1,69 +1,51 @@
 from __future__ import annotations
-
-import argparse
-import sys
-from typing import List
-
-from .config import load_config
+import argparse, json, sys
+from pathlib import Path
+import pandas as pd
+from .artifacts import load_model
+from .audit import write_audit
+from .dataset import validate_prediction_schema
 from .errors import AMKError
-from .runner import classify_only, run_experiment, validate_only
+from .experiment import prepare, run
+from .v1config import load_v1_config
 
-
-def _build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(prog="amk", description="allesmusterklassifizierer CLI")
-    sub = p.add_subparsers(dest="cmd", required=True)
-
-    def add_common(sp: argparse.ArgumentParser):
-        sp.add_argument("--config", required=True, help="Ruta a YAML en configs/")
-        sp.add_argument(
-            "--set",
-            action="append",
-            default=[],
-            help="Override estilo key.path=value (puede repetirse). Ej: --set classifier.params.k=7",
-        )
-        sp.add_argument("--outputs-dir", default="outputs", help="Directorio base de outputs (default: outputs)")
-
-    s_validate = sub.add_parser("validate", help="Corre SOLO validación: splits + stats")
-    add_common(s_validate)
-
-    s_classify = sub.add_parser("classify", help="Corre SOLO clasificador")
-    add_common(s_classify)
-
-    s_run = sub.add_parser("run", help="Corre validación + clasificador (experimento completo)")
-    add_common(s_run)
-
+def parser():
+    p=argparse.ArgumentParser(prog="amk",description="Clasificación tabular reproducible AMK v1"); sub=p.add_subparsers(dest="command",required=True)
+    config=sub.add_parser("config"); cs=config.add_subparsers(dest="action",required=True); cv=cs.add_parser("validate"); cv.add_argument("--config",required=True)
+    for name in ["audit","split","train","evaluate","run","compare"]:
+        sp=sub.add_parser(name); sp.add_argument("--config",required=True)
+    predict=sub.add_parser("predict"); predict.add_argument("--model",required=True); predict.add_argument("--data",required=True); predict.add_argument("--output")
+    inspect=sub.add_parser("inspect-model"); inspect.add_argument("--model",required=True)
+    for name in ["validate","classify"]:
+        sp=sub.add_parser(name,help=f"Flujo legado {name}"); sp.add_argument("--config",required=True); sp.add_argument("--outputs-dir",default="outputs"); sp.add_argument("--set",action="append",default=[])
     return p
 
+def _read(path: Path):
+    if path.suffix.lower()==".csv": return pd.read_csv(path)
+    if path.suffix.lower()==".tsv": return pd.read_csv(path,sep="\t")
+    if path.suffix.lower()==".parquet": return pd.read_parquet(path)
+    if path.suffix.lower() in {".xlsx",".xls"}: return pd.read_excel(path)
+    raise AMKError(f"Formato de predicción no soportado: {path.suffix}")
 
-def main(argv: List[str] | None = None) -> None:
-    parser = _build_parser()
-    args = parser.parse_args(argv)
-
+def main(argv=None):
+    args=parser().parse_args(argv)
     try:
-        cfg = load_config(args.config, overrides=args.set)
-
-        if args.cmd == "validate":
-            paths = validate_only(cfg, outputs_dir=args.outputs_dir)
-            print(f"OK validate -> {paths.run_dir}")
-            print(f"  meta: {paths.meta_json}")
-
-        elif args.cmd == "classify":
-            paths = classify_only(cfg, outputs_dir=args.outputs_dir)
-            print(f"OK classify -> {paths.run_dir}")
-            print(f"  meta: {paths.meta_json}")
-            print(f"  predictions: {paths.predictions_csv}")
-            print(f"  metrics: {paths.metrics_json}")
-
-        elif args.cmd == "run":
-            paths = run_experiment(cfg, outputs_dir=args.outputs_dir)
-            print(f"OK run -> {paths.run_dir}")
-            print(f"  meta: {paths.meta_json}")
-            print(f"  fold_predictions: {paths.fold_predictions_csv}")
-            print(f"  metrics: {paths.metrics_json}")
-
-        else:
-            raise RuntimeError("Comando no reconocido (bug).")
-
-    except AMKError as e:
-        print(f"ERROR: {e}", file=sys.stderr)
-        sys.exit(2)
+        if args.command=="config": cfg=load_v1_config(args.config); print(f"OK config v{cfg.format_version}: {cfg.run_name}"); return
+        if args.command in {"audit","split"}:
+            cfg=load_v1_config(args.config); audit,splits=prepare(cfg); out=cfg.output_dir/args.command/cfg.run_name; out.mkdir(parents=True,exist_ok=True); write_audit(audit,out)
+            if args.command=="split": (out/"splits.json").write_text(json.dumps([{"fold":s.fold,"train":s.train_idx.tolist(),"validation":s.validation_idx.tolist() if s.validation_idx is not None else None,"test":s.test_idx.tolist()} for s in splits],indent=2),encoding="utf-8")
+            print(f"OK {args.command} -> {out}"); return
+        if args.command in {"train","evaluate","run","compare"}: print(f"OK {args.command} -> {run(load_v1_config(args.config),compare=args.command=='compare')}"); return
+        if args.command=="predict":
+            a=load_model(args.model); X=validate_prediction_schema(_read(Path(args.data)),a.feature_names,extra=a.extra_columns); pred=a.pipeline.predict(X); out=pd.DataFrame({"prediction":pred})
+            if hasattr(a.pipeline,"predict_proba"):
+                probs=a.pipeline.predict_proba(X)
+                for i,c in enumerate(a.classes): out[f"probability_{c}"]=probs[:,i]
+            target=Path(args.output or "predictions.csv"); out.to_csv(target,index=False); print(f"OK predict -> {target}"); return
+        if args.command=="inspect-model":
+            a=load_model(args.model); print(json.dumps({"artifact_version":a.artifact_version,"features":a.feature_names,"classes":list(map(str,a.classes)),"schema":a.schema,"metadata":a.metadata},indent=2,ensure_ascii=False,default=str)); return
+        from .config import load_config
+        from .runner import classify_only, validate_only
+        cfg=load_config(args.config,overrides=args.set); fn=validate_only if args.command=="validate" else classify_only; print(f"OK legacy {args.command} -> {fn(cfg,outputs_dir=args.outputs_dir).run_dir}")
+    except AMKError as exc: print(f"ERROR: {exc}",file=sys.stderr); raise SystemExit(2) from exc
+    except Exception as exc: print(f"ERROR inesperado: {exc}",file=sys.stderr); raise SystemExit(1) from exc

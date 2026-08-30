@@ -2,4 +2,7 @@ numpy
 pandas
 pyyaml
 scikit-learn
-matpotlib
+imbalanced-learn
+pydantic
+joblib
+matplotlib

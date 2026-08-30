@@ -19,10 +19,13 @@ def confusion_matrix_df(y_true: np.ndarray, y_pred: np.ndarray, labels: List[Any
     label_to_i = {lab: i for i, lab in enumerate(labels_s)}
     cm = np.zeros((len(labels_s), len(labels_s)), dtype=int)
 
-    # Just if in labels
+    unknown = (set(y_true_s) | set(y_pred_s)) - set(labels_s)
+    if unknown:
+        raise ValueError(f"Etiquetas desconocidas en matriz de confusión: {sorted(unknown)}")
     for yt, yp in zip(y_true_s, y_pred_s):
-        if yt in label_to_i and yp in label_to_i:
-            cm[label_to_i[yt], label_to_i[yp]] += 1
+        cm[label_to_i[yt], label_to_i[yp]] += 1
+    if int(cm.sum()) != len(y_pred_s):
+        raise ValueError("La suma de la matriz no coincide con el número de predicciones")
 
     df = pd.DataFrame(
         cm,

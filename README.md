@@ -1,4 +1,69 @@
-# allesmusterklassifizierer
+# allesmusterklassifizierer v1
+
+AMK v1 es un framework para clasificación supervisada tabular binaria y multiclase. Su unidad de
+persistencia es el pipeline completo: imputación, conversión, codificación, escalado, balanceo y
+estimador se ajustan exclusivamente con entrenamiento y se vuelven a ajustar dentro de cada fold.
+El flujo 0.1 académico se conserva temporalmente en los comandos `validate` y `classify`.
+
+## Inicio rápido v1
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e '.[dev,formats]'
+amk config validate --config configs/v1_numeric.yaml
+amk audit --config configs/v1_numeric.yaml
+amk split --config configs/v1_numeric.yaml
+amk run --config configs/v1_numeric.yaml
+amk compare --config configs/v1_numeric.yaml
+amk predict --model outputs/runs/<ejecucion>/pipeline.joblib --data input/haberman_58.csv
+amk inspect-model --model outputs/runs/<ejecucion>/pipeline.joblib
+```
+
+La ruta del dataset se resuelve respecto del YAML. La configuración se valida completamente antes
+de crear una carpeta de ejecución. Cada columna declara un rol (`feature`, `target`, `group`,
+`timestamp`, `identifier`, `ignored`) y tipo semántico (`numeric`, `boolean`, `nominal`, `ordinal`,
+`datetime`, `identifier`). Las ordinales requieren `order`; las nominales siempre usan one-hot.
+
+## Particiones y prevención de fuga
+
+Se soportan holdout, train/validation/test, K-fold, estratificados, LOO, grupos, stratified-group,
+temporal y walk-forward. El test final se aparta antes del tuning; validación se deriva de train.
+Los splitters verifican intersección cero, grupos disjuntos y precedencia temporal. SMOTE,
+sobremuestreo y submuestreo viven dentro de `imblearn.Pipeline`, por lo que nunca actúan al predecir.
+
+## Auditoría, modelos y métricas
+
+`amk audit` registra faltantes, cardinalidad, clases, desbalance, constantes, casi constantes,
+identificadores probables, duplicados redundantes y patrones indiscernibles. Sus decisiones son
+`report_only`, conservación explícita, fallo, eliminación total o mapping manual; no hay voto mayoritario
+implícito. El registro incluye regresión logística, KNN, centroide, árboles, bosques, Extra Trees,
+SVM, Gaussian NB, Gradient/HistGradient Boosting, AdaBoost y MLP. Grid y randomized search usan el
+mismo conjunto de splits. Accuracy, balanced accuracy, precision, recall, especificidad OVR, F1,
+MCC, kappa, ROC-AUC, PR-AUC y log loss se calculan con primitivas de sklearn.
+
+## Artefactos y extensión
+
+Cada ejecución contiene configuración resuelta, manifiesto, entorno, hash y esquema, auditoría,
+bitácoras, splits, resultados, predicciones, matrices, pipeline y reporte HTML. Para agregar un modelo,
+incorpora un `ModelSpec` en `models.REGISTRY`; para agregar un splitter, extiende `make_splits` y su
+invariante en `_check`. La migración consiste en declarar el esquema formal y mover `io`, `validation`
+y `classifier` a `dataset`, `columns`, `split` y `models`; los YAML 0.1 siguen funcionando sólo en los
+comandos legados.
+
+## Calidad
+
+```bash
+pytest --cov=allesmusterklassifizierer
+ruff check src tests
+mypy --python-version 3.14
+```
+
+Las dependencias de Excel y Parquet están en el extra `formats`; desarrollo y CI usan `dev`.
+
+---
+
+## Documentación del prototipo 0.1
 
 **allesmusterklassifizierer (amk)** es un framework experimental en Python para **clasificación de patrones**, diseñado para explorar de forma reproducible distintos **métodos de validación** y **clasificadores basados en distancia** sobre datasets en formato CSV.
 

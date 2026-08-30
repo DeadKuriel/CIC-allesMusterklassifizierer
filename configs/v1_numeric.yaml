@@ -1,0 +1,20 @@
+format_version: 1
+run_name: numeric_demo
+seed: 42
+output_dir: outputs
+dataset: {path: ../input/haberman_58.csv, format: csv}
+target: class
+columns:
+  - {name: "1", role: feature, semantic_type: numeric}
+  - {name: "2", role: feature, semantic_type: numeric}
+  - {name: class, role: target, semantic_type: nominal}
+audit: {redundant_policy: keep_first, indiscernible_policy: report_only}
+preprocessing: {numeric_imputation: median, scale: standard}
+split: {strategy: stratified_holdout, test_size: 0.2}
+balance: {strategy: none}
+models:
+  - {name: logistic_regression}
+  - {name: random_forest, params: {n_estimators: 100}}
+tuning: {method: none}
+evaluation: {primary_metric: balanced_accuracy, average: macro}
+persistence: {save_pipeline: true, report_html: true, plots: false}
