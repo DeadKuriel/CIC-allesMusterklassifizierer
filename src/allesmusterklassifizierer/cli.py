@@ -10,7 +10,7 @@ from .experiment import prepare, run
 from .v1config import load_v1_config
 
 def parser():
-    p=argparse.ArgumentParser(prog="amk",description="Clasificación tabular reproducible AMK v1"); sub=p.add_subparsers(dest="command",required=True)
+    p=argparse.ArgumentParser(prog="amk",description="Clasificación tabular reproducible AMK 0.2"); sub=p.add_subparsers(dest="command",required=True)
     config=sub.add_parser("config"); cs=config.add_subparsers(dest="action",required=True); cv=cs.add_parser("validate"); cv.add_argument("--config",required=True)
     for name in ["audit","split","train","evaluate","run","compare"]:
         sp=sub.add_parser(name); sp.add_argument("--config",required=True)

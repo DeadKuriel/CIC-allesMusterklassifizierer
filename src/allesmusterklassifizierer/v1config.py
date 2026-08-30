@@ -161,7 +161,7 @@ def load_v1_config(path: str | Path) -> ExperimentConfig:
     except ConfigError:
         raise
     except Exception as exc:
-        raise ConfigError(f"Configuración v1 inválida: {exc}") from exc
+        raise ConfigError(f"Configuración AMK 0.2 inválida: {exc}") from exc
     if not cfg.dataset.path.is_absolute():
         cfg.dataset.path = (p.parent / cfg.dataset.path).resolve()
     if cfg.audit.resolution_mapping and not cfg.audit.resolution_mapping.is_absolute():

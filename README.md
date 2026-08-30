@@ -1,21 +1,21 @@
-# allesmusterklassifizierer v1
+# allesmusterklassifizierer 0.2
 
-AMK v1 es un framework para clasificación supervisada tabular binaria y multiclase. Su unidad de
+AMK 0.2 es un framework para clasificación supervisada tabular binaria y multiclase. Su unidad de
 persistencia es el pipeline completo: imputación, conversión, codificación, escalado, balanceo y
 estimador se ajustan exclusivamente con entrenamiento y se vuelven a ajustar dentro de cada fold.
 El flujo 0.1 académico se conserva temporalmente en los comandos `validate` y `classify`.
 
-## Inicio rápido v1
+## Inicio rápido 0.2
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e '.[dev,formats]'
-amk config validate --config configs/v1_numeric.yaml
-amk audit --config configs/v1_numeric.yaml
-amk split --config configs/v1_numeric.yaml
-amk run --config configs/v1_numeric.yaml
-amk compare --config configs/v1_numeric.yaml
+amk config validate --config configs/v0_2_numeric.yaml
+amk audit --config configs/v0_2_numeric.yaml
+amk split --config configs/v0_2_numeric.yaml
+amk run --config configs/v0_2_numeric.yaml
+amk compare --config configs/v0_2_numeric.yaml
 amk predict --model outputs/runs/<ejecucion>/pipeline.joblib --data input/haberman_58.csv
 amk inspect-model --model outputs/runs/<ejecucion>/pipeline.joblib
 ```

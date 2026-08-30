@@ -66,7 +66,7 @@ def load_csv_dataset(
     if X.shape[1] == 0:
         raise DataError("El dataset no contiene características.")
     if np.isnan(X).any() or np.isinf(X).any():
-        raise DataError("Features con NaN o infinitos; usa el flujo v1 para imputación trazable.")
+        raise DataError("Features con NaN o infinitos; usa el flujo 0.2 para imputación trazable.")
     if pd.isna(y).any() or pd.Series(y).nunique() < 2:
         raise DataError("El objetivo no puede ser nulo y debe contener al menos dos clases.")
 
