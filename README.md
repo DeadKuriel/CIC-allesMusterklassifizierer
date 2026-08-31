@@ -61,6 +61,9 @@ mypy --python-version 3.14
 
 Las dependencias de Excel y Parquet están en el extra `formats`; desarrollo y CI usan `dev`.
 
+La referencia completa de todas las claves, valores permitidos y requisitos condicionales está en
+[docs/configuration.md](docs/configuration.md).
+
 ---
 
 ## Documentación del prototipo 0.1
