@@ -41,6 +41,14 @@ class DatasetConfig(StrictModel):
     decimal: str = "."
     sheet_name: str | int = 0
     missing_values: list[Any] = Field(default_factory=list)
+    row_group_size: int | None = Field(default=None, ge=1)
+    row_group_column: str | None = None
+
+    @model_validator(mode="after")
+    def validate_row_groups(self) -> "DatasetConfig":
+        if (self.row_group_size is None) != (self.row_group_column is None):
+            raise ValueError("row_group_size y row_group_column deben configurarse juntos")
+        return self
 
 
 class AuditConfig(StrictModel):
@@ -80,6 +88,7 @@ class BalanceConfig(StrictModel):
 
 class ModelConfig(StrictModel):
     name: str
+    label: str | None = None
     params: dict[str, Any] = Field(default_factory=dict)
     enabled: bool = True
 
@@ -145,6 +154,9 @@ class ExperimentConfig(StrictModel):
             raise ValueError("average=binary requiere positive_class explícita")
         if not any(m.enabled for m in self.models):
             raise ValueError("Se requiere al menos un modelo habilitado")
+        model_labels = [m.label or m.name for m in self.models if m.enabled]
+        if len(model_labels) != len(set(model_labels)):
+            raise ValueError("Cada modelo habilitado requiere un label único cuando se repite name")
         return self
 
     def column(self, role: Role) -> ColumnConfig | None:

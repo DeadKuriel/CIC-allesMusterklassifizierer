@@ -1,0 +1,108 @@
+format_version: 1
+run_name: mushroom_distance_classifiers
+seed: 13
+output_dir: outputs
+
+dataset:
+  path: ../input/mushroom.xlsx
+  format: excel
+  sheet_name: secondary_data
+  missing_values: ["", "NA", "?"]
+  row_group_size: 353
+  row_group_column: mushroom_group
+
+target: class
+
+columns:
+  - {name: class, role: target, semantic_type: nominal}
+  - {name: cap-diameter, role: feature, semantic_type: numeric}
+  - {name: cap-shape, role: feature, semantic_type: nominal}
+  - {name: cap-surface, role: feature, semantic_type: nominal}
+  - {name: cap-color, role: feature, semantic_type: nominal}
+  - name: does-bruise-or-bleed
+    role: feature
+    semantic_type: boolean
+    true_values: [t]
+    false_values: [f]
+  - {name: gill-attachment, role: feature, semantic_type: nominal}
+  - {name: gill-spacing, role: feature, semantic_type: nominal}
+  - {name: gill-color, role: feature, semantic_type: nominal}
+  - {name: stem-height, role: feature, semantic_type: numeric}
+  - {name: stem-width, role: feature, semantic_type: numeric}
+  - {name: stem-root, role: feature, semantic_type: nominal}
+  - {name: stem-surface, role: feature, semantic_type: nominal}
+  - {name: stem-color, role: feature, semantic_type: nominal}
+  - {name: veil-type, role: feature, semantic_type: nominal}
+  - {name: veil-color, role: feature, semantic_type: nominal}
+  - name: has-ring
+    role: feature
+    semantic_type: boolean
+    true_values: [t]
+    false_values: [f]
+  - {name: ring-type, role: feature, semantic_type: nominal}
+  - {name: spore-print-color, role: feature, semantic_type: nominal}
+  - {name: habitat, role: feature, semantic_type: nominal}
+  - {name: season, role: feature, semantic_type: nominal}
+  - {name: mushroom_group, role: group, semantic_type: identifier}
+
+audit:
+  redundant_policy: keep_first
+  indiscernible_policy: report_only
+  target_missing: fail
+  near_constant_threshold: 0.99
+  imbalance_ratio_warning: 3.0
+
+preprocessing:
+  numeric_imputation: median
+  categorical_imputation: missing_category
+  categorical_constant: __MISSING__
+  add_missing_indicators: false
+  min_category_frequency: null
+  scale: standard
+
+split:
+  strategy: stratified_group_kfold
+  n_splits: 5
+  shuffle: true
+
+balance:
+  strategy: none
+
+models:
+  - name: centroid
+    label: euclidean_centroid
+  - name: knn
+    label: 1nn_euclidean
+    params:
+      n_neighbors: 1
+      distance: euclidean
+      n_jobs: -1
+  - name: knn
+    label: 3nn_euclidean
+    params:
+      n_neighbors: 3
+      distance: euclidean
+      n_jobs: -1
+  - name: knn
+    label: 5nn_euclidean
+    params:
+      n_neighbors: 5
+      distance: euclidean
+      n_jobs: -1
+
+tuning:
+  method: none
+  n_jobs: -1
+
+evaluation:
+  primary_metric: balanced_accuracy
+  average: binary
+  positive_class: p
+  zero_division: 0
+  confidence_interval: false
+
+persistence:
+  save_pipeline: true
+  report_html: true
+  plots: false
+  extra_columns: ignore

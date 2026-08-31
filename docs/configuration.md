@@ -132,6 +132,8 @@ mínima debe incluir `run_name`, `dataset`, `target`, `columns` y al menos un mo
 | `decimal` | texto | `.` | Separador decimal para CSV y TSV. |
 | `sheet_name` | texto o entero | `0` | Hoja de Excel por nombre o posición. |
 | `missing_values` | lista | `[]` | Valores adicionales tratados como faltantes. |
+| `row_group_size` | entero o `null` | `null` | Tamaño fijo de bloques consecutivos usados como grupos. |
+| `row_group_column` | texto o `null` | `null` | Nombre de la columna de grupo derivada; se configura junto con `row_group_size`. |
 
 Parquet requiere `pyarrow`; Excel requiere `openpyxl`. Se instalan con
 `pip install -e '.[formats]'`.
@@ -262,8 +264,11 @@ su configuración automática para datos mixtos está pendiente.
 
 ## `models`
 
-Cada elemento admite `name`, `enabled` —predeterminado `true`— y `params`, que se entrega al
+Cada elemento admite `name`, `label`, `enabled` —predeterminado `true`— y `params`, que se entrega al
 constructor de sklearn.
+
+`label` permite distinguir variantes del mismo algoritmo, por ejemplo `1nn_euclidean` y
+`3nn_euclidean`; debe ser único entre los modelos habilitados.
 
 | Nombre | Implementación | Valores predeterminados adicionales |
 |---|---|---|

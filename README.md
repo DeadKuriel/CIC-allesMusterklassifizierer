@@ -20,6 +20,27 @@ amk predict --model outputs/runs/<ejecucion>/pipeline.joblib --data input/haberm
 amk inspect-model --model outputs/runs/<ejecucion>/pipeline.joblib
 ```
 
+### Dataset Mushroom
+
+La configuración `configs/mushroom.yaml` procesa la hoja `secondary_data` de
+`input/mushroom.xlsx`. Convierte las variables booleanas `t`/`f`, imputa los faltantes
+categóricos como una categoría explícita, aplica one-hot a las variables nominales y
+estandariza las variables numéricas. La auditoría conserva el primer registro de cada
+patrón redundante e informa cualquier patrón indiscernible sin resolverlo automáticamente.
+
+```bash
+amk config validate --config configs/mushroom.yaml
+amk audit --config configs/mushroom.yaml
+amk compare --config configs/mushroom.yaml
+```
+
+La comparación usa K-fold estratificado por grupos de 5 folds, con mezcla y semilla 13, y
+ejecuta el clasificador euclidiano de centroide, 1-NN, 3-NN y 5-NN con distancia euclidiana.
+Cada especie permanece completa en un solo fold. Además de
+`final_metrics.json`, que corresponde al
+modelo seleccionado, genera `model_metrics.json` y `cv_results.csv` con las métricas de los
+tres clasificadores.
+
 La ruta del dataset se resuelve respecto del YAML. La configuración se valida completamente antes
 de crear una carpeta de ejecución. Cada columna declara un rol (`feature`, `target`, `group`,
 `timestamp`, `identifier`, `ignored`) y tipo semántico (`numeric`, `boolean`, `nominal`, `ordinal`,

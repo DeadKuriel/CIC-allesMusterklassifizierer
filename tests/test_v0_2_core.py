@@ -43,3 +43,12 @@ def test_group_and_temporal_invariants():
 def test_ordinal_order_is_required(tmp_path):
     raw={"format_version":1,"run_name":"x","dataset":{"path":tmp_path/"x.csv"},"target":"y","columns":[{"name":"x","role":"feature","semantic_type":"ordinal"},{"name":"y","role":"target","semantic_type":"nominal"}],"models":[{"name":"knn"}]}
     with pytest.raises(Exception): ExperimentConfig.model_validate(raw)
+
+
+def test_repeated_model_names_require_unique_labels(tmp_path):
+    raw={"format_version":1,"run_name":"x","dataset":{"path":tmp_path/"x.csv"},"target":"y",
+         "columns":[{"name":"x","role":"feature","semantic_type":"numeric"},
+                    {"name":"y","role":"target","semantic_type":"nominal"}],
+         "models":[{"name":"knn","label":"1nn"},{"name":"knn","label":"3nn"}]}
+    cfg=ExperimentConfig.model_validate(raw)
+    assert [m.label for m in cfg.models]==["1nn","3nn"]
