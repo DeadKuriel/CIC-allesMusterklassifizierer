@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 import time
 from pathlib import Path
+from typing import Any
+
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
@@ -21,7 +23,7 @@ from .evaluation import classification_metrics, confusion_tables
 from .models import REGISTRY, ALIASES, create_model
 from .preprocessing import build_pipeline
 from .splitting import DataSplit, make_splits
-from .v1config import ExperimentConfig
+from .v1config import ExperimentConfig, ModelConfig
 
 
 def prepare(cfg: ExperimentConfig):
@@ -41,44 +43,61 @@ def prepare(cfg: ExperimentConfig):
     return audit, splits
 
 
-def _cv(splits: list[DataSplit]):
+def _cv(splits: list[DataSplit]) -> list[tuple[np.ndarray, np.ndarray]]:
     return [(s.train_idx, s.test_idx) for s in splits]
 
 
-def _fit(cfg, model_cfg, X, y, splits):
+def _fit(
+    cfg: ExperimentConfig,
+    model_cfg: ModelConfig,
+    X: Any,
+    y: Any,
+    splits: list[DataSplit],
+) -> tuple[Any, dict[str, Any], list[dict[str, Any]]]:
     estimator = create_model(model_cfg.name, model_cfg.params, cfg.seed)
     pipeline = build_pipeline(cfg, estimator)
+    canonical_name = ALIASES.get(model_cfg.name) or model_cfg.name
     space = (
         cfg.tuning.spaces.get(model_cfg.name)
-        or REGISTRY[ALIASES.get(model_cfg.name, model_cfg.name)].search_space
+        or REGISTRY[canonical_name].search_space
     )
     space = {f"model__{k}": v for k, v in space.items()}
     if cfg.tuning.method == "none":
         pipeline.fit(X, y)
         return pipeline, {}, []
-    cls = (
-        GridSearchCV if cfg.tuning.method in {"grid", "halving"} else RandomizedSearchCV
-    )
-    kwargs = dict(
-        scoring=cfg.evaluation.primary_metric,
-        cv=_cv(splits),
-        n_jobs=cfg.tuning.n_jobs,
-        refit=True,
-        error_score=cfg.tuning.error_score,
-        return_train_score=False,
-    )
-    search = (
-        cls(pipeline, space, **kwargs)
-        if cls is GridSearchCV
-        else cls(
-            pipeline, space, n_iter=cfg.tuning.n_iter, random_state=cfg.seed, **kwargs
+    if cfg.tuning.method in {"grid", "halving"}:
+        search: Any = GridSearchCV(
+            pipeline,
+            space,
+            scoring=cfg.evaluation.primary_metric,
+            cv=_cv(splits),
+            n_jobs=cfg.tuning.n_jobs,
+            refit=True,
+            error_score=cfg.tuning.error_score,
+            return_train_score=False,
         )
-    )
+    else:
+        search = RandomizedSearchCV(
+            pipeline,
+            space,
+            n_iter=cfg.tuning.n_iter,
+            scoring=cfg.evaluation.primary_metric,
+            cv=_cv(splits),
+            n_jobs=cfg.tuning.n_jobs,
+            refit=True,
+            random_state=cfg.seed,
+            error_score=cfg.tuning.error_score,
+            return_train_score=False,
+        )
     search.fit(X, y)
+    cv_records = [
+        {str(key): value for key, value in row.items()}
+        for row in pd.DataFrame(search.cv_results_).to_dict("records")
+    ]
     return (
         search.best_estimator_,
         search.best_params_,
-        pd.DataFrame(search.cv_results_).to_dict("records"),
+        cv_records,
     )
 
 
@@ -125,6 +144,7 @@ def run(cfg: ExperimentConfig, *, compare=False) -> Path:
     for mc in [m for m in cfg.models if m.enabled]:
         model_label = mc.label or mc.name
         t0 = time.perf_counter()
+        eval_X: pd.DataFrame | None = None
         try:
             if final_holdout:
                 pipeline, params, cv_results = _fit(
@@ -211,13 +231,16 @@ def run(cfg: ExperimentConfig, *, compare=False) -> Path:
                 probs = (
                     np.concatenate(fold_prob) if len(fold_prob) == len(splits) else None
                 )
-            scores = (
-                pipeline.decision_function(eval_X)
-                if final_holdout and hasattr(pipeline, "decision_function")
-                else (
-                    probs[:, 1] if probs is not None and probs.shape[1] == 2 else None
+            if final_holdout and eval_X is not None and hasattr(
+                pipeline, "decision_function"
+            ):
+                scores = pipeline.decision_function(eval_X)
+            else:
+                scores = (
+                    probs[:, 1]
+                    if probs is not None and probs.shape[1] == 2
+                    else None
                 )
-            )
             labels = list(pipeline.classes_)
             metrics = classification_metrics(
                 eval_y,

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import warnings
-from typing import Any
+from typing import Any, Literal
 
 import numpy as np
 import pandas as pd
@@ -21,6 +21,10 @@ from sklearn.metrics import (
 )
 
 from .errors import ValidationError
+
+MetricAverage = Literal["macro", "micro", "weighted", "binary"]
+RocAverage = Literal["macro", "micro", "weighted"]
+ZeroDivision = Literal["warn", 0, 1]
 
 
 def confusion_tables(
@@ -49,9 +53,9 @@ def classification_metrics(
     labels: list[Any],
     scores=None,
     probabilities=None,
-    average="macro",
-    positive_class=None,
-    zero_division="warn",
+    average: MetricAverage = "macro",
+    positive_class: Any = None,
+    zero_division: ZeroDivision = "warn",
 ) -> dict[str, Any]:
     zd = "warn" if zero_division == "warn" else int(zero_division)
     kwargs = {"average": average, "zero_division": zd}
@@ -87,11 +91,12 @@ def classification_metrics(
     if probabilities is not None:
         result["log_loss"] = log_loss(y_true, probabilities, labels=labels)
         try:
+            roc_average: RocAverage = "macro" if average == "binary" else average
             result["roc_auc"] = roc_auc_score(
                 y_true,
                 probabilities[:, 1] if len(labels) == 2 else probabilities,
                 multi_class="ovr",
-                average=average if average != "binary" else "macro",
+                average=roc_average,
             )
         except ValueError as exc:
             warnings.warn(str(exc), stacklevel=2)

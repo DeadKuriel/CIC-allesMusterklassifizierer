@@ -136,7 +136,12 @@ def build_preprocessor(cfg: ExperimentConfig) -> ColumnTransformer:
             )
         )
     if ordinal := by_type.get("ordinal"):
-        categories = [columns[name].order for name in ordinal]
+        categories: list[list[Any]] = []
+        for name in ordinal:
+            order = columns[name].order
+            if order is None:
+                raise SchemaError(f"La columna ordinal '{name}' requiere order")
+            categories.append(order)
         transformers.append(
             (
                 "ordinal",

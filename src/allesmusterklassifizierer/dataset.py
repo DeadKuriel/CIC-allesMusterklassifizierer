@@ -104,9 +104,12 @@ def load_dataset(
         raise DataError("El dataset está vacío")
     if cfg.dataset.row_group_column:
         group_column = cfg.dataset.row_group_column
+        group_size = cfg.dataset.row_group_size
+        if group_size is None:
+            raise SchemaError("row_group_column requiere row_group_size")
         if group_column in frame.columns:
             raise SchemaError(f"La columna de grupo derivada ya existe: {group_column}")
-        frame[group_column] = np.arange(len(frame)) // int(cfg.dataset.row_group_size)
+        frame[group_column] = np.arange(len(frame)) // group_size
     declared = [c.name for c in cfg.columns if c.role != "ignored"]
     required = [name for name in declared if require_target or name != cfg.target]
     missing = [name for name in required if name not in frame.columns]
