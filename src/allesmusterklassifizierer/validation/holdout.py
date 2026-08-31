@@ -33,7 +33,9 @@ class HoldoutSplitter:
             perm = rng.permutation(all_idx)
             test_idx = perm[:test_n]
             train_idx = perm[test_n:]
-            yield Split(fold=0, train_idx=np.sort(train_idx), test_idx=np.sort(test_idx))
+            yield Split(
+                fold=0, train_idx=np.sort(train_idx), test_idx=np.sort(test_idx)
+            )
             return
 
         # stratified sampling
@@ -101,9 +103,13 @@ class HoldoutSplitter:
             train_parts.append(train_idx_c)
 
         test_idx = np.concatenate(test_parts) if test_parts else np.array([], dtype=int)
-        train_idx = np.concatenate(train_parts) if train_parts else np.array([], dtype=int)
+        train_idx = (
+            np.concatenate(train_parts) if train_parts else np.array([], dtype=int)
+        )
 
         if test_idx.size == 0 or train_idx.size == 0:
-            raise ValidationError("Holdout estratificado produjo split vacío. Revisa tu dataset/test_size.")
+            raise ValidationError(
+                "Holdout estratificado produjo split vacío. Revisa tu dataset/test_size."
+            )
 
         yield Split(fold=0, train_idx=np.sort(train_idx), test_idx=np.sort(test_idx))

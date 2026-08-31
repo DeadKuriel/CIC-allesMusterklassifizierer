@@ -63,7 +63,9 @@ def get_int(d: Dict[str, Any], key: str, default: int) -> int:
     return v
 
 
-def get_list_of_str(d: Dict[str, Any], key: str, default: List[str] | None = None) -> List[str]:
+def get_list_of_str(
+    d: Dict[str, Any], key: str, default: List[str] | None = None
+) -> List[str]:
     v = d.get(key, default if default is not None else [])
     if v is None:
         return []

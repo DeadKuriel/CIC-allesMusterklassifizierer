@@ -4,7 +4,10 @@ from typing import Literal
 
 import numpy as np
 
-DistanceName = Literal["euclidean", "manhattan", "cityblock", "chebyshev", "chessboard", "minkowski"]
+DistanceName = Literal[
+    "euclidean", "manhattan", "cityblock", "chebyshev", "chessboard", "minkowski"
+]
+
 
 def _parse_metric(metric):
     if isinstance(metric, str):
@@ -16,6 +19,7 @@ def _parse_metric(metric):
         return mtype, params
 
     raise ValueError(f"Distancia no soportada: {metric}")
+
 
 def pairwise_distance(Xtr, x, metric):
     mtype, params = _parse_metric(metric)

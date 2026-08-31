@@ -24,14 +24,18 @@ class KNNClassifier:
         if not isinstance(self.k, int) or self.k <= 0:
             raise ClassifierError("k debe ser entero positivo.")
         if self.k > X.shape[0]:
-            raise ClassifierError(f"k={self.k} no puede ser mayor que n_train={X.shape[0]}.")
+            raise ClassifierError(
+                f"k={self.k} no puede ser mayor que n_train={X.shape[0]}."
+            )
 
         self.X_train_ = X
         self.y_train_ = y
 
     def predict(self, X: np.ndarray) -> np.ndarray:
         if self.X_train_ is None or self.y_train_ is None:
-            raise ClassifierError("El clasificador no está entrenado. Llama fit() primero.")
+            raise ClassifierError(
+                "El clasificador no está entrenado. Llama fit() primero."
+            )
         if X.ndim != 2:
             raise ClassifierError("X debe ser 2D.")
 

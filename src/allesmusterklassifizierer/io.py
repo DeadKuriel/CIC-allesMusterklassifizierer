@@ -38,19 +38,25 @@ def load_csv_dataset(
     df = pd.read_csv(p)
 
     if target_col not in df.columns:
-        raise DataError(f"Columna target '{target_col}' no existe en {csv_path}. Columnas: {list(df.columns)}")
+        raise DataError(
+            f"Columna target '{target_col}' no existe en {csv_path}. Columnas: {list(df.columns)}"
+        )
 
     drop_cols = drop_cols or []
     for c in drop_cols:
         if c not in df.columns:
-            raise DataError(f"drop_cols incluye '{c}', pero no existe en el dataset. Columnas: {list(df.columns)}")
+            raise DataError(
+                f"drop_cols incluye '{c}', pero no existe en el dataset. Columnas: {list(df.columns)}"
+            )
 
     # separate y
     y = df[target_col].to_numpy()
     X_df = df.drop(columns=[target_col] + drop_cols)
 
     # ensure numeric
-    non_numeric = [c for c in X_df.columns if not pd.api.types.is_numeric_dtype(X_df[c])]
+    non_numeric = [
+        c for c in X_df.columns if not pd.api.types.is_numeric_dtype(X_df[c])
+    ]
     if non_numeric:
         raise DataError(
             "Features no numéricos detectados: "
@@ -66,9 +72,13 @@ def load_csv_dataset(
     if X.shape[1] == 0:
         raise DataError("El dataset no contiene características.")
     if np.isnan(X).any() or np.isinf(X).any():
-        raise DataError("Features con NaN o infinitos; usa el flujo 0.2 para imputación trazable.")
+        raise DataError(
+            "Features con NaN o infinitos; usa el flujo 0.2 para imputación trazable."
+        )
     if pd.isna(y).any() or pd.Series(y).nunique() < 2:
-        raise DataError("El objetivo no puede ser nulo y debe contener al menos dos clases.")
+        raise DataError(
+            "El objetivo no puede ser nulo y debe contener al menos dos clases."
+        )
 
     # classes stable ordering
     classes = sorted(pd.unique(pd.Series(y)).tolist(), key=lambda z: str(z))

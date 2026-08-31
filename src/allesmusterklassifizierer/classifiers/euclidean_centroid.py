@@ -14,6 +14,7 @@ class EuclideanCentroidClassifier:
     Nearest Centroid / Minimum Distance to Class Centroids.
     Distance: Fixed Euclidean (L2) metric, not configurable.
     """
+
     centroids_: Dict[Any, np.ndarray] | None = None
     classes_: List[Any] | None = None
 
@@ -36,7 +37,9 @@ class EuclideanCentroidClassifier:
 
     def predict(self, X: np.ndarray) -> np.ndarray:
         if self.centroids_ is None or self.classes_ is None:
-            raise ClassifierError("El clasificador no está entrenado. Llama fit() primero.")
+            raise ClassifierError(
+                "El clasificador no está entrenado. Llama fit() primero."
+            )
         if X.ndim != 2:
             raise ClassifierError("X debe ser 2D.")
 
@@ -44,7 +47,9 @@ class EuclideanCentroidClassifier:
         preds = np.empty(n, dtype=object)
 
         # Stack centroids for vectorized distance computation
-        centroid_mat = np.stack([self.centroids_[c] for c in self.classes_], axis=0)  # (C, d)
+        centroid_mat = np.stack(
+            [self.centroids_[c] for c in self.classes_], axis=0
+        )  # (C, d)
 
         for i in range(n):
             x = X[i]  # (d,)

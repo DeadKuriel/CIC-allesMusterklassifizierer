@@ -35,7 +35,9 @@ def _mcc_multiclass_from_cm(cm: np.ndarray) -> float:
     return _safe_div(num, den)
 
 
-def compute_metrics(cm_df: pd.DataFrame, labels: List[Any], y_true: np.ndarray, y_pred: np.ndarray) -> Dict[str, Any]:
+def compute_metrics(
+    cm_df: pd.DataFrame, labels: List[Any], y_true: np.ndarray, y_pred: np.ndarray
+) -> Dict[str, Any]:
     """
     Derived metrics computed from the (raw) confusion matrix.
     Returns:

@@ -6,7 +6,9 @@ import numpy as np
 import pandas as pd
 
 
-def confusion_matrix_df(y_true: np.ndarray, y_pred: np.ndarray, labels: List[Any]) -> pd.DataFrame:
+def confusion_matrix_df(
+    y_true: np.ndarray, y_pred: np.ndarray, labels: List[Any]
+) -> pd.DataFrame:
     """
     Confusion matrix implementation without relying on sklearn (prevents 'binary vs unknown' target issues).
     - All labels are internally converted to strings to guarantee consistency.
@@ -21,11 +23,15 @@ def confusion_matrix_df(y_true: np.ndarray, y_pred: np.ndarray, labels: List[Any
 
     unknown = (set(y_true_s) | set(y_pred_s)) - set(labels_s)
     if unknown:
-        raise ValueError(f"Etiquetas desconocidas en matriz de confusión: {sorted(unknown)}")
+        raise ValueError(
+            f"Etiquetas desconocidas en matriz de confusión: {sorted(unknown)}"
+        )
     for yt, yp in zip(y_true_s, y_pred_s):
         cm[label_to_i[yt], label_to_i[yp]] += 1
     if int(cm.sum()) != len(y_pred_s):
-        raise ValueError("La suma de la matriz no coincide con el número de predicciones")
+        raise ValueError(
+            "La suma de la matriz no coincide con el número de predicciones"
+        )
 
     df = pd.DataFrame(
         cm,

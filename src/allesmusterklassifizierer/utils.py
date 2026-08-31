@@ -100,8 +100,12 @@ class RunPaths:
     metrics_json: Path
 
     @staticmethod
-    def create(base_outputs_dir: str | Path, run_name: str, timestamp: str) -> "RunPaths":
-        run_dir = ensure_dir(Path(base_outputs_dir) / "runs" / f"{timestamp}__{run_name}")
+    def create(
+        base_outputs_dir: str | Path, run_name: str, timestamp: str
+    ) -> "RunPaths":
+        run_dir = ensure_dir(
+            Path(base_outputs_dir) / "runs" / f"{timestamp}__{run_name}"
+        )
         return RunPaths(
             run_dir=run_dir,
             meta_json=run_dir / "meta.json",

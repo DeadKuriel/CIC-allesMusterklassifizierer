@@ -20,7 +20,9 @@ class TabularDataset:
 
     @property
     def X(self) -> pd.DataFrame:
-        return self.frame.drop(columns=[c for c in self.frame.columns if c not in self.feature_names])
+        return self.frame.drop(
+            columns=[c for c in self.frame.columns if c not in self.feature_names]
+        )
 
     @property
     def feature_names(self) -> list[str]:
@@ -42,7 +44,13 @@ def file_sha256(path: Path) -> str:
 def _format(path: Path, explicit: str | None) -> str:
     if explicit:
         return explicit
-    extensions = {".csv": "csv", ".tsv": "tsv", ".parquet": "parquet", ".xlsx": "excel", ".xls": "excel"}
+    extensions = {
+        ".csv": "csv",
+        ".tsv": "tsv",
+        ".parquet": "parquet",
+        ".xlsx": "excel",
+        ".xls": "excel",
+    }
     try:
         return extensions[path.suffix.lower()]
     except KeyError as exc:
@@ -53,13 +61,16 @@ def _duplicate_headers(path: Path, cfg: ExperimentConfig, fmt: str) -> list[str]
     if fmt not in {"csv", "tsv"}:
         return []
     import csv
+
     delimiter = cfg.dataset.delimiter or ("\t" if fmt == "tsv" else ",")
     with path.open(encoding=cfg.dataset.encoding, newline="") as handle:
         header = next(csv.reader(handle, delimiter=delimiter), [])
     return sorted({name for name in header if header.count(name) > 1})
 
 
-def load_dataset(cfg: ExperimentConfig, *, require_target: bool = True) -> TabularDataset:
+def load_dataset(
+    cfg: ExperimentConfig, *, require_target: bool = True
+) -> TabularDataset:
     path = cfg.dataset.path
     if not path.is_file():
         raise DataError(f"No existe el dataset: {path}")
@@ -70,12 +81,19 @@ def load_dataset(cfg: ExperimentConfig, *, require_target: bool = True) -> Tabul
     na_values = cfg.dataset.missing_values or None
     try:
         if fmt in {"csv", "tsv"}:
-            frame = pd.read_csv(path, sep=cfg.dataset.delimiter or ("\t" if fmt == "tsv" else ","),
-                                encoding=cfg.dataset.encoding, decimal=cfg.dataset.decimal, na_values=na_values)
+            frame = pd.read_csv(
+                path,
+                sep=cfg.dataset.delimiter or ("\t" if fmt == "tsv" else ","),
+                encoding=cfg.dataset.encoding,
+                decimal=cfg.dataset.decimal,
+                na_values=na_values,
+            )
         elif fmt == "parquet":
             frame = pd.read_parquet(path)
         elif fmt == "excel":
-            frame = pd.read_excel(path, sheet_name=cfg.dataset.sheet_name, na_values=na_values)
+            frame = pd.read_excel(
+                path, sheet_name=cfg.dataset.sheet_name, na_values=na_values
+            )
         else:  # pragma: no cover
             raise DataError(f"Formato no soportado: {fmt}")
     except ImportError as exc:
@@ -117,19 +135,30 @@ def load_dataset(cfg: ExperimentConfig, *, require_target: bool = True) -> Tabul
         elif col.semantic_type == "ordinal":
             unknown = set(frame[col.name].dropna().unique()) - set(col.order or [])
             if unknown:
-                raise SchemaError(f"Categorías ordinales desconocidas en '{col.name}': {sorted(map(str, unknown))}")
+                raise SchemaError(
+                    f"Categorías ordinales desconocidas en '{col.name}': {sorted(map(str, unknown))}"
+                )
     if require_target:
         if frame[cfg.target].isna().any() and cfg.audit.target_missing == "fail":
-            raise SchemaError("El objetivo contiene valores faltantes; target_missing=fail")
+            raise SchemaError(
+                "El objetivo contiene valores faltantes; target_missing=fail"
+            )
         if frame[cfg.target].nunique(dropna=True) < 2:
             raise SchemaError("El objetivo debe contener al menos dos clases")
     original_index = pd.Series(frame.index, index=frame.index, name="original_index")
     frame.attrs["feature_names"] = feature_names
     frame.attrs["target"] = cfg.target
-    return TabularDataset(frame=frame, original_index=original_index, sha256=file_sha256(path), source=path)
+    return TabularDataset(
+        frame=frame,
+        original_index=original_index,
+        sha256=file_sha256(path),
+        source=path,
+    )
 
 
-def validate_prediction_schema(frame: pd.DataFrame, required: list[str], *, extra: str = "ignore") -> pd.DataFrame:
+def validate_prediction_schema(
+    frame: pd.DataFrame, required: list[str], *, extra: str = "ignore"
+) -> pd.DataFrame:
     missing = [c for c in required if c not in frame]
     if missing:
         raise SchemaError(f"Columnas requeridas ausentes: {missing}")

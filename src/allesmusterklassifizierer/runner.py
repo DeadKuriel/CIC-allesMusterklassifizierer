@@ -17,14 +17,17 @@ from .utils import RunPaths, now_timestamp, write_json
 from .validation import HoldoutSplitter, LeaveOneOutSplitter, KFoldSplitter
 from .metrics.visualization import save_confusion_matrix_display
 
+
 def _confmat_display_enabled(cfg: dict) -> bool:
     report = cfg.get("report", {}) or {}
     return bool(report.get("confusion_matrix_display", False))
+
 
 def _export_partitions_enabled(cfg: dict) -> bool:
     validation = cfg.get("validation", {}) or {}
     export = validation.get("export", {}) or {}
     return bool(export.get("csv", False))
+
 
 def _build_splitter(vcfg: Dict[str, Any]):
     vtype = vcfg.get("type")
@@ -48,7 +51,9 @@ def _build_splitter(vcfg: Dict[str, Any]):
             stratify=bool(params.get("stratify", True)),
         )
 
-    raise ConfigError(f"validation.type inválido: {vtype}. Usa 'holdout', 'loo' o 'kfold'.")
+    raise ConfigError(
+        f"validation.type inválido: {vtype}. Usa 'holdout', 'loo' o 'kfold'."
+    )
 
 
 def _build_classifier(ccfg: Dict[str, Any]):
@@ -62,10 +67,12 @@ def _build_classifier(ccfg: Dict[str, Any]):
                 "No se permite classifier.params.distance en el YAML."
             )
         from .classifiers.euclidean_centroid import EuclideanCentroidClassifier
+
         return EuclideanCentroidClassifier()
 
     if ctype == "knn":
         from .classifiers.knn import KNNClassifier
+
         k = params.get("k", 1)
         dist = params.get("distance", "euclidean")
         return KNNClassifier(k=int(k), distance=dist)
@@ -81,7 +88,9 @@ def _dataset_from_cfg(cfg: Dict[str, Any]) -> Dataset:
 
     if not dataset_path:
         raise ConfigError("Falta io.dataset (ruta CSV).")
-    return load_csv_dataset(str(dataset_path), target_col=str(target_col), drop_cols=list(drop_cols))
+    return load_csv_dataset(
+        str(dataset_path), target_col=str(target_col), drop_cols=list(drop_cols)
+    )
 
 
 def validate_only(cfg: Dict[str, Any], outputs_dir: str = "outputs") -> RunPaths:
@@ -103,8 +112,12 @@ def validate_only(cfg: Dict[str, Any], outputs_dir: str = "outputs") -> RunPaths
                 "fold": int(split.fold),
                 "train_size": int(split.train_idx.size),
                 "test_size": int(split.test_idx.size),
-                "train_class_counts": {str(c): int(np.sum(ytr == c)) for c in ds.classes},
-                "test_class_counts": {str(c): int(np.sum(yte == c)) for c in ds.classes},
+                "train_class_counts": {
+                    str(c): int(np.sum(ytr == c)) for c in ds.classes
+                },
+                "test_class_counts": {
+                    str(c): int(np.sum(yte == c)) for c in ds.classes
+                },
             }
         )
 
@@ -122,12 +135,15 @@ def validate_only(cfg: Dict[str, Any], outputs_dir: str = "outputs") -> RunPaths
             fold_dir = partitions_dir / f"fold_{split.fold}"
             fold_dir.mkdir(parents=True, exist_ok=True)
 
-            train_df = full_df.iloc[split.train_idx].drop(columns=drop_cols, errors="ignore")
-            test_df = full_df.iloc[split.test_idx].drop(columns=drop_cols, errors="ignore")
+            train_df = full_df.iloc[split.train_idx].drop(
+                columns=drop_cols, errors="ignore"
+            )
+            test_df = full_df.iloc[split.test_idx].drop(
+                columns=drop_cols, errors="ignore"
+            )
 
             train_df.to_csv(fold_dir / "train.csv", index=False)
             test_df.to_csv(fold_dir / "test.csv", index=False)
-
 
     meta = {
         "mode": "validate",
@@ -145,7 +161,7 @@ def validate_only(cfg: Dict[str, Any], outputs_dir: str = "outputs") -> RunPaths
         "partitions": {
             "exported": _export_partitions_enabled(cfg),
             "format": "csv",
-            "path": "partitions/"
+            "path": "partitions/",
         },
         "folds": folds[:50] if len(folds) > 50 else folds,
         "folds_truncated": len(folds) > 50,
@@ -175,10 +191,16 @@ def classify_only(cfg: Dict[str, Any], outputs_dir: str = "outputs") -> RunPaths
     test_path = io_cfg.get("test_dataset")
 
     if train_path and test_path:
-        train_ds = load_csv_dataset(str(train_path), target_col=target_col, drop_cols=drop_cols)
-        test_ds = load_csv_dataset(str(test_path), target_col=target_col, drop_cols=drop_cols)
+        train_ds = load_csv_dataset(
+            str(train_path), target_col=target_col, drop_cols=drop_cols
+        )
+        test_ds = load_csv_dataset(
+            str(test_path), target_col=target_col, drop_cols=drop_cols
+        )
         if train_ds.feature_names != test_ds.feature_names:
-            raise ConfigError(f"Esquema train/test incompatible: train={train_ds.feature_names}, test={test_ds.feature_names}")
+            raise ConfigError(
+                f"Esquema train/test incompatible: train={train_ds.feature_names}, test={test_ds.feature_names}"
+            )
         _run_single_split(
             cfg=cfg,
             paths=paths,
@@ -276,8 +298,8 @@ def run_experiment(cfg: Dict[str, Any], outputs_dir: str = "outputs") -> RunPath
     cm_df.to_csv(paths.confusion_csv, index=True)
     cm_norm_rows.to_csv(paths.confusion_norm_rows_csv, index=True)
     cm_norm_cols.to_csv(paths.confusion_norm_cols_csv, index=True)
-    
-        # ConfusionMatrixDisplay
+
+    # ConfusionMatrixDisplay
     if _confmat_display_enabled(cfg):
         labels = [str(l) for l in ds.classes]
 
@@ -305,7 +327,9 @@ def run_experiment(cfg: Dict[str, Any], outputs_dir: str = "outputs") -> RunPath
             normalize=True,
         )
 
-    metrics = compute_metrics(cm_df, labels=ds.classes, y_true=y_true_all, y_pred=y_pred_all)
+    metrics = compute_metrics(
+        cm_df, labels=ds.classes, y_true=y_true_all, y_pred=y_pred_all
+    )
     write_json(paths.metrics_json, metrics)
 
     meta = {
@@ -339,6 +363,7 @@ def run_experiment(cfg: Dict[str, Any], outputs_dir: str = "outputs") -> RunPath
 
 
 # helpers
+
 
 def _subset_dataset(ds: Dataset, idx: np.ndarray) -> Dataset:
     idx = np.asarray(idx, dtype=int)
@@ -394,8 +419,8 @@ def _run_single_split(
     cm_df.to_csv(paths.confusion_csv, index=True)
     cm_norm_rows.to_csv(paths.confusion_norm_rows_csv, index=True)
     cm_norm_cols.to_csv(paths.confusion_norm_cols_csv, index=True)
-    
-        # ConfusionMatrixDisplay
+
+    # ConfusionMatrixDisplay
     if _confmat_display_enabled(cfg):
         labels = [str(l) for l in dataset_labels]
 
@@ -423,7 +448,9 @@ def _run_single_split(
             normalize=True,
         )
 
-    metrics = compute_metrics(cm_df, labels=dataset_labels, y_true=test_ds.y, y_pred=yhat)
+    metrics = compute_metrics(
+        cm_df, labels=dataset_labels, y_true=test_ds.y, y_pred=yhat
+    )
     write_json(paths.metrics_json, metrics)
 
     meta = {
@@ -431,8 +458,14 @@ def _run_single_split(
         "run_name": str(cfg.get("run_name", mode_name)),
         "timestamp": str(paths.run_dir.name.split("__", 1)[0]),
         "config": cfg,
-        "train": {"n_samples": int(train_ds.X.shape[0]), "n_features": int(train_ds.X.shape[1])},
-        "test": {"n_samples": int(test_ds.X.shape[0]), "n_features": int(test_ds.X.shape[1])},
+        "train": {
+            "n_samples": int(train_ds.X.shape[0]),
+            "n_features": int(train_ds.X.shape[1]),
+        },
+        "test": {
+            "n_samples": int(test_ds.X.shape[0]),
+            "n_features": int(test_ds.X.shape[1]),
+        },
         "labels": [str(l) for l in dataset_labels],
         "summary": {
             "accuracy": metrics.get("accuracy", 0.0),

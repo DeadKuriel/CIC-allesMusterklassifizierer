@@ -27,7 +27,9 @@ class ColumnConfig(StrictModel):
     @model_validator(mode="after")
     def validate_order(self) -> "ColumnConfig":
         if self.semantic_type == "ordinal" and (not self.order or len(self.order) < 2):
-            raise ValueError(f"La columna ordinal '{self.name}' requiere order con al menos dos categorías")
+            raise ValueError(
+                f"La columna ordinal '{self.name}' requiere order con al menos dos categorías"
+            )
         if self.semantic_type != "ordinal" and self.order is not None:
             raise ValueError("order sólo es válido para columnas ordinales")
         return self
@@ -47,13 +49,19 @@ class DatasetConfig(StrictModel):
     @model_validator(mode="after")
     def validate_row_groups(self) -> "DatasetConfig":
         if (self.row_group_size is None) != (self.row_group_column is None):
-            raise ValueError("row_group_size y row_group_column deben configurarse juntos")
+            raise ValueError(
+                "row_group_size y row_group_column deben configurarse juntos"
+            )
         return self
 
 
 class AuditConfig(StrictModel):
-    redundant_policy: Literal["report_only", "keep_first", "keep_last", "fail"] = "report_only"
-    indiscernible_policy: Literal["report_only", "fail", "remove_all", "resolve_by_mapping"] = "report_only"
+    redundant_policy: Literal["report_only", "keep_first", "keep_last", "fail"] = (
+        "report_only"
+    )
+    indiscernible_policy: Literal[
+        "report_only", "fail", "remove_all", "resolve_by_mapping"
+    ] = "report_only"
     resolution_mapping: Path | None = None
     target_missing: Literal["fail", "drop_rows"] = "fail"
     near_constant_threshold: float = Field(default=0.99, ge=0.5, le=1.0)
@@ -63,17 +71,30 @@ class AuditConfig(StrictModel):
 class PreprocessingConfig(StrictModel):
     numeric_imputation: Literal["mean", "median", "constant"] = "median"
     numeric_constant: float = 0.0
-    categorical_imputation: Literal["most_frequent", "constant", "missing_category"] = "missing_category"
+    categorical_imputation: Literal["most_frequent", "constant", "missing_category"] = (
+        "missing_category"
+    )
     categorical_constant: str = "__MISSING__"
     add_missing_indicators: bool = False
     min_category_frequency: int | float | None = None
-    scale: Literal["none", "standard", "minmax", "robust", "normalize", "power"] = "standard"
+    scale: Literal["none", "standard", "minmax", "robust", "normalize", "power"] = (
+        "standard"
+    )
 
 
 class SplitConfig(StrictModel):
     strategy: Literal[
-        "holdout", "stratified_holdout", "train_validation_test", "kfold", "stratified_kfold",
-        "loo", "group_holdout", "group_kfold", "stratified_group_kfold", "temporal", "walk_forward"
+        "holdout",
+        "stratified_holdout",
+        "train_validation_test",
+        "kfold",
+        "stratified_kfold",
+        "loo",
+        "group_holdout",
+        "group_kfold",
+        "stratified_group_kfold",
+        "temporal",
+        "walk_forward",
     ] = "stratified_holdout"
     test_size: float = Field(default=0.2, gt=0, lt=1)
     validation_size: float = Field(default=0.2, gt=0, lt=1)
@@ -82,7 +103,9 @@ class SplitConfig(StrictModel):
 
 
 class BalanceConfig(StrictModel):
-    strategy: Literal["none", "random_under", "random_over", "smote", "smotenc"] = "none"
+    strategy: Literal["none", "random_under", "random_over", "smote", "smotenc"] = (
+        "none"
+    )
     params: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -141,22 +164,37 @@ class ExperimentConfig(StrictModel):
             raise ValueError("Los nombres declarados en columns deben ser únicos")
         targets = [c.name for c in self.columns if c.role == "target"]
         if targets != [self.target]:
-            raise ValueError("Debe existir exactamente una columna role=target y coincidir con target")
+            raise ValueError(
+                "Debe existir exactamente una columna role=target y coincidir con target"
+            )
         if not any(c.role == "feature" for c in self.columns):
             raise ValueError("Se requiere al menos una feature")
         groups = [c for c in self.columns if c.role == "group"]
         times = [c for c in self.columns if c.role == "timestamp"]
-        if self.split.strategy in {"group_holdout", "group_kfold", "stratified_group_kfold"} and len(groups) != 1:
-            raise ValueError("La división por grupos requiere exactamente una columna role=group")
+        if (
+            self.split.strategy
+            in {"group_holdout", "group_kfold", "stratified_group_kfold"}
+            and len(groups) != 1
+        ):
+            raise ValueError(
+                "La división por grupos requiere exactamente una columna role=group"
+            )
         if self.split.strategy in {"temporal", "walk_forward"} and len(times) != 1:
-            raise ValueError("La división temporal requiere exactamente una columna role=timestamp")
-        if self.evaluation.average == "binary" and self.evaluation.positive_class is None:
+            raise ValueError(
+                "La división temporal requiere exactamente una columna role=timestamp"
+            )
+        if (
+            self.evaluation.average == "binary"
+            and self.evaluation.positive_class is None
+        ):
             raise ValueError("average=binary requiere positive_class explícita")
         if not any(m.enabled for m in self.models):
             raise ValueError("Se requiere al menos un modelo habilitado")
         model_labels = [m.label or m.name for m in self.models if m.enabled]
         if len(model_labels) != len(set(model_labels)):
-            raise ValueError("Cada modelo habilitado requiere un label único cuando se repite name")
+            raise ValueError(
+                "Cada modelo habilitado requiere un label único cuando se repite name"
+            )
         return self
 
     def column(self, role: Role) -> ColumnConfig | None:
@@ -177,5 +215,7 @@ def load_v1_config(path: str | Path) -> ExperimentConfig:
     if not cfg.dataset.path.is_absolute():
         cfg.dataset.path = (p.parent / cfg.dataset.path).resolve()
     if cfg.audit.resolution_mapping and not cfg.audit.resolution_mapping.is_absolute():
-        cfg.audit.resolution_mapping = (p.parent / cfg.audit.resolution_mapping).resolve()
+        cfg.audit.resolution_mapping = (
+            p.parent / cfg.audit.resolution_mapping
+        ).resolve()
     return cfg

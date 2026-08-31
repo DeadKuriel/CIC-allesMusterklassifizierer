@@ -14,5 +14,4 @@ class Split:
 
 
 class Splitter(Protocol):
-    def split(self, y: np.ndarray) -> Iterable[Split]:
-        ...
+    def split(self, y: np.ndarray) -> Iterable[Split]: ...
