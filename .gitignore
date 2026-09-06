@@ -30,6 +30,8 @@ Thumbs.db
 # =========================
 outputs/*
 !outputs/.gitkeep
+tmp/*
+output/*
 
 # =========================
 # Logs
