@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import time
 from pathlib import Path
 from typing import Any
@@ -20,7 +21,9 @@ from .artifacts import (
 from .audit import audit_and_clean, write_audit
 from .dataset import load_dataset
 from .evaluation import classification_metrics, confusion_tables
+from .errors import ValidationError
 from .models import REGISTRY, ALIASES, create_model
+from .metrics.visualization import save_confusion_matrix_display
 from .preprocessing import build_pipeline
 from .splitting import DataSplit, make_splits
 from .v1config import ExperimentConfig, ModelConfig
@@ -47,6 +50,72 @@ def _cv(splits: list[DataSplit]) -> list[tuple[np.ndarray, np.ndarray]]:
     return [(s.train_idx, s.test_idx) for s in splits]
 
 
+def _artifact_name(label: str) -> str:
+    """Return a filesystem-safe, readable model label."""
+    name = re.sub(r"[^A-Za-z0-9._-]+", "_", label).strip("._")
+    return name or "model"
+
+
+def _confusion_matrix_labels(
+    configured_order: list[Any] | None, model_labels: list[Any]
+) -> list[Any]:
+    """Return a complete class order for confusion-matrix rows and columns."""
+    if configured_order is None:
+        return model_labels
+    if len(configured_order) != len(set(configured_order)):
+        raise ValidationError("confusion_matrix_order contiene clases duplicadas")
+    if set(configured_order) != set(model_labels):
+        raise ValidationError(
+            "confusion_matrix_order debe contener exactamente las clases del modelo"
+        )
+    return configured_order
+
+
+def _write_model_confusion_matrices(
+    run_dir: Path,
+    model_label: str,
+    y_true: Any,
+    y_pred: Any,
+    labels: list[Any],
+    *,
+    plots: bool,
+) -> dict[str, str]:
+    """Persist raw and normalized confusion matrices for one model."""
+    model_dir = run_dir / "confusion_matrices" / _artifact_name(model_label)
+    model_dir.mkdir(parents=True, exist_ok=True)
+    cm, cm_rows, cm_columns = confusion_tables(y_true, y_pred, labels)
+    tables = {
+        "raw": (cm, "confusion_matrix.csv", "Matriz de confusión"),
+        "normalized_rows": (
+            cm_rows,
+            "confusion_matrix_normalized_rows.csv",
+            "Matriz de confusión normalizada por clase real",
+        ),
+        "normalized_columns": (
+            cm_columns,
+            "confusion_matrix_normalized_columns.csv",
+            "Matriz de confusión normalizada por clase predicha",
+        ),
+    }
+    artifacts: dict[str, str] = {}
+    display_labels = list(map(str, labels))
+    for kind, (table, filename, title) in tables.items():
+        csv_path = model_dir / filename
+        table.to_csv(csv_path)
+        artifacts[f"{kind}_csv"] = str(csv_path.relative_to(run_dir))
+        if plots:
+            png_path = csv_path.with_suffix(".png")
+            save_confusion_matrix_display(
+                table,
+                display_labels,
+                str(png_path),
+                f"{title} — {model_label}",
+                normalize=kind != "raw",
+            )
+            artifacts[f"{kind}_png"] = str(png_path.relative_to(run_dir))
+    return artifacts
+
+
 def _fit(
     cfg: ExperimentConfig,
     model_cfg: ModelConfig,
@@ -58,8 +127,7 @@ def _fit(
     pipeline = build_pipeline(cfg, estimator)
     canonical_name = ALIASES.get(model_cfg.name) or model_cfg.name
     space = (
-        cfg.tuning.spaces.get(model_cfg.name)
-        or REGISTRY[canonical_name].search_space
+        cfg.tuning.spaces.get(model_cfg.name) or REGISTRY[canonical_name].search_space
     )
     space = {f"model__{k}": v for k, v in space.items()}
     if cfg.tuning.method == "none":
@@ -138,6 +206,7 @@ def run(cfg: ExperimentConfig, *, compare=False) -> Path:
     rows = []
     fold_rows = []
     model_metrics = {}
+    confusion_artifacts = {}
     chosen = None
     chosen_metric = -np.inf
     best_payload = None
@@ -231,17 +300,20 @@ def run(cfg: ExperimentConfig, *, compare=False) -> Path:
                 probs = (
                     np.concatenate(fold_prob) if len(fold_prob) == len(splits) else None
                 )
-            if final_holdout and eval_X is not None and hasattr(
-                pipeline, "decision_function"
+            if (
+                final_holdout
+                and eval_X is not None
+                and hasattr(pipeline, "decision_function")
             ):
                 scores = pipeline.decision_function(eval_X)
             else:
                 scores = (
-                    probs[:, 1]
-                    if probs is not None and probs.shape[1] == 2
-                    else None
+                    probs[:, 1] if probs is not None and probs.shape[1] == 2 else None
                 )
             labels = list(pipeline.classes_)
+            confusion_labels = _confusion_matrix_labels(
+                cfg.evaluation.confusion_matrix_order, labels
+            )
             metrics = classification_metrics(
                 eval_y,
                 pred,
@@ -256,6 +328,14 @@ def run(cfg: ExperimentConfig, *, compare=False) -> Path:
                 metrics.get(cfg.evaluation.primary_metric, metrics["balanced_accuracy"])
             )
             model_metrics[model_label] = metrics
+            confusion_artifacts[model_label] = _write_model_confusion_matrices(
+                run_dir,
+                model_label,
+                eval_y,
+                pred,
+                confusion_labels,
+                plots=cfg.persistence.plots,
+            )
             rows.append(
                 {
                     "model": model_label,
@@ -317,12 +397,16 @@ def run(cfg: ExperimentConfig, *, compare=False) -> Path:
         for i, c in enumerate(pipeline.classes_):
             pred_frame[f"probability_{c}"] = probs[:, i]
     pred_frame.to_csv(run_dir / "predictions.csv", index=False)
-    cm, cmr, cmc = confusion_tables(eval_y, pred, list(pipeline.classes_))
+    confusion_labels = _confusion_matrix_labels(
+        cfg.evaluation.confusion_matrix_order, list(pipeline.classes_)
+    )
+    cm, cmr, cmc = confusion_tables(eval_y, pred, confusion_labels)
     cm.to_csv(run_dir / "confusion_matrix.csv")
     cmr.to_csv(run_dir / "confusion_matrix_normalized_rows.csv")
     cmc.to_csv(run_dir / "confusion_matrix_normalized_columns.csv")
     write_json(run_dir / "final_metrics.json", metrics)
     write_json(run_dir / "model_metrics.json", model_metrics)
+    write_json(run_dir / "confusion_matrices.json", confusion_artifacts)
     write_json(
         run_dir / "splits.json",
         [

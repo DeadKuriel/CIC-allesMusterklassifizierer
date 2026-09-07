@@ -2,6 +2,10 @@ from __future__ import annotations
 
 from typing import List
 
+import matplotlib
+
+matplotlib.use("Agg")
+
 import matplotlib.pyplot as plt
 from sklearn.metrics import ConfusionMatrixDisplay
 import pandas as pd
@@ -13,7 +17,7 @@ def save_confusion_matrix_display(
     out_path: str,
     title: str,
     normalize: bool = False,
-    cmap: str = "Blues",
+    cmap: str = "Reds",
 ) -> None:
     """
     Saves a PNG image of the confusion matrix using ConfusionMatrixDisplay.

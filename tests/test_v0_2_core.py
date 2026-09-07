@@ -9,6 +9,10 @@ from allesmusterklassifizierer.evaluation import (
     confusion_tables,
 )
 from allesmusterklassifizierer.errors import ValidationError
+from allesmusterklassifizierer.experiment import (
+    _confusion_matrix_labels,
+    _write_model_confusion_matrices,
+)
 from allesmusterklassifizierer.splitting import make_splits
 from allesmusterklassifizierer.v1config import ExperimentConfig, SplitConfig
 
@@ -31,6 +35,38 @@ def test_distance_aliases_and_minkowski():
 def test_confusion_rejects_unknown():
     with pytest.raises(ValidationError):
         confusion_tables([0, 2], [0, 1], [0, 1])
+
+
+def test_confusion_can_put_positive_class_first():
+    labels = _confusion_matrix_labels(["p", "e"], ["e", "p"])
+    raw, _, _ = confusion_tables(["p", "p", "e", "e"], ["p", "e", "p", "e"], labels)
+
+    assert list(raw.index) == ["true_p", "true_e"]
+    assert list(raw.columns) == ["pred_p", "pred_e"]
+    assert raw.to_numpy().tolist() == [[1, 1], [1, 1]]
+
+
+def test_writes_confusion_matrices_and_plots_for_each_model(tmp_path):
+    artifacts = _write_model_confusion_matrices(
+        tmp_path,
+        "3nn euclidean",
+        ["e", "e", "p", "p"],
+        ["e", "p", "p", "p"],
+        ["e", "p"],
+        plots=True,
+    )
+
+    assert set(artifacts) == {
+        "raw_csv",
+        "raw_png",
+        "normalized_rows_csv",
+        "normalized_rows_png",
+        "normalized_columns_csv",
+        "normalized_columns_png",
+    }
+    assert all(
+        (tmp_path / relative_path).is_file() for relative_path in artifacts.values()
+    )
 
 
 def test_metrics_match_sklearn():

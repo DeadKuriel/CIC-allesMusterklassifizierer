@@ -352,7 +352,7 @@ puede producir log loss, ROC-AUC y PR-AUC binaria.
 |---|---|---|---|
 | `save_pipeline` | booleano | `true` | Guarda `pipeline.joblib`. |
 | `report_html` | booleano | `true` | Genera `report.html`. |
-| `plots` | booleano | `true` | Reservado; los gráficos enriquecidos están pendientes. |
+| `plots` | booleano | `true` | Guarda en PNG las matrices de confusión de cada modelo. |
 | `extra_columns` | `ignore`, `fail` | `ignore` | Política para columnas adicionales al predecir. |
 
 Al predecir, siempre se falla si falta una feature requerida y las columnas se reordenan por nombre.

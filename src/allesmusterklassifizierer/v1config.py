@@ -129,6 +129,7 @@ class EvaluationConfig(StrictModel):
     primary_metric: str = "balanced_accuracy"
     average: Literal["macro", "micro", "weighted", "binary"] = "macro"
     positive_class: Any | None = None
+    confusion_matrix_order: list[Any] | None = None
     zero_division: Literal["warn", 0, 1] = "warn"
     confidence_interval: bool = False
 

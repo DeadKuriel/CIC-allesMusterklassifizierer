@@ -14,36 +14,36 @@ dataset:
 target: class
 
 columns:
-  - {name: class, role: target, semantic_type: nominal}
-  - {name: cap-diameter, role: feature, semantic_type: numeric}
-  - {name: cap-shape, role: feature, semantic_type: nominal}
-  - {name: cap-surface, role: feature, semantic_type: nominal}
-  - {name: cap-color, role: feature, semantic_type: nominal}
+  - { name: class, role: target, semantic_type: nominal }
+  - { name: cap-diameter, role: feature, semantic_type: numeric }
+  - { name: cap-shape, role: feature, semantic_type: nominal }
+  - { name: cap-surface, role: feature, semantic_type: nominal }
+  - { name: cap-color, role: feature, semantic_type: nominal }
   - name: does-bruise-or-bleed
     role: feature
     semantic_type: boolean
     true_values: [t]
     false_values: [f]
-  - {name: gill-attachment, role: feature, semantic_type: nominal}
-  - {name: gill-spacing, role: feature, semantic_type: nominal}
-  - {name: gill-color, role: feature, semantic_type: nominal}
-  - {name: stem-height, role: feature, semantic_type: numeric}
-  - {name: stem-width, role: feature, semantic_type: numeric}
-  - {name: stem-root, role: feature, semantic_type: nominal}
-  - {name: stem-surface, role: feature, semantic_type: nominal}
-  - {name: stem-color, role: feature, semantic_type: nominal}
-  - {name: veil-type, role: feature, semantic_type: nominal}
-  - {name: veil-color, role: feature, semantic_type: nominal}
+  - { name: gill-attachment, role: feature, semantic_type: nominal }
+  - { name: gill-spacing, role: feature, semantic_type: nominal }
+  - { name: gill-color, role: feature, semantic_type: nominal }
+  - { name: stem-height, role: feature, semantic_type: numeric }
+  - { name: stem-width, role: feature, semantic_type: numeric }
+  - { name: stem-root, role: feature, semantic_type: nominal }
+  - { name: stem-surface, role: feature, semantic_type: nominal }
+  - { name: stem-color, role: feature, semantic_type: nominal }
+  - { name: veil-type, role: feature, semantic_type: nominal }
+  - { name: veil-color, role: feature, semantic_type: nominal }
   - name: has-ring
     role: feature
     semantic_type: boolean
     true_values: [t]
     false_values: [f]
-  - {name: ring-type, role: feature, semantic_type: nominal}
-  - {name: spore-print-color, role: feature, semantic_type: nominal}
-  - {name: habitat, role: feature, semantic_type: nominal}
-  - {name: season, role: feature, semantic_type: nominal}
-  - {name: mushroom_group, role: group, semantic_type: identifier}
+  - { name: ring-type, role: feature, semantic_type: nominal }
+  - { name: spore-print-color, role: feature, semantic_type: nominal }
+  - { name: habitat, role: feature, semantic_type: nominal }
+  - { name: season, role: feature, semantic_type: nominal }
+  - { name: mushroom_group, role: group, semantic_type: identifier }
 
 audit:
   redundant_policy: keep_first
@@ -98,11 +98,12 @@ evaluation:
   primary_metric: balanced_accuracy
   average: binary
   positive_class: p
+  confusion_matrix_order: [p, e]
   zero_division: 0
   confidence_interval: false
 
 persistence:
   save_pipeline: true
   report_html: true
-  plots: false
+  plots: true
   extra_columns: ignore
