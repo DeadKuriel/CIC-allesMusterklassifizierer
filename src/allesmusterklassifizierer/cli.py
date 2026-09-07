@@ -7,6 +7,7 @@ from .audit import write_audit
 from .dataset import validate_prediction_schema
 from .errors import AMKError
 from .experiment import prepare, run
+from .metrics.confusion_demo import save_confusion_demo
 from .v1config import load_v1_config
 
 
@@ -28,6 +29,32 @@ def parser():
     predict.add_argument("--output")
     inspect = sub.add_parser("inspect-model")
     inspect.add_argument("--model", required=True)
+    demo = sub.add_parser(
+        "confusion-demo",
+        help="Genera una matriz binaria conceptual o con valores manuales",
+    )
+    demo.add_argument(
+        "--values",
+        nargs=4,
+        type=float,
+        metavar=("TP", "FN", "FP", "TN"),
+        help="Valores manuales en el orden TP FN FP TN",
+    )
+    demo.add_argument("--color", default="Reds", help="Paleta de matplotlib")
+    demo.add_argument("--title", default="Matriz de confusión")
+    demo.add_argument("--class-names", nargs=2, default=("Positivo", "Negativo"))
+    demo.add_argument("--output", default="confusion_demo.png")
+    demo.add_argument("--dpi", type=int, default=300)
+    demo.add_argument(
+        "--size", nargs=2, type=float, default=(7.0, 6.0), metavar=("ANCHO", "ALTO")
+    )
+    demo.add_argument("--font-size", type=float, default=20.0)
+    demo.add_argument("--text-color")
+    demo.add_argument("--background-color", default="white")
+    demo.add_argument("--hide-axis-labels", action="store_true")
+    demo.add_argument("--show-colorbar", action="store_true")
+    demo.add_argument("--transparent", action="store_true")
+    demo.add_argument("--language", choices=("es", "en"), default="es")
     for name in ["validate", "classify"]:
         sp = sub.add_parser(name, help=f"Flujo legado {name}")
         sp.add_argument("--config", required=True)
@@ -119,6 +146,25 @@ def main(argv=None):
                     default=str,
                 )
             )
+            return
+        if args.command == "confusion-demo":
+            target = save_confusion_demo(
+                args.output,
+                values=args.values,
+                color=args.color,
+                title=args.title,
+                class_names=args.class_names,
+                dpi=args.dpi,
+                size=tuple(args.size),
+                font_size=args.font_size,
+                text_color=args.text_color,
+                background_color=args.background_color,
+                show_axis_labels=not args.hide_axis_labels,
+                show_colorbar=args.show_colorbar,
+                transparent=args.transparent,
+                language=args.language,
+            )
+            print(f"OK confusion-demo -> {target}")
             return
         from .config import load_config
         from .runner import classify_only, validate_only

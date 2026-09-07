@@ -85,6 +85,9 @@ Las dependencias de Excel y Parquet están en el extra `formats`; desarrollo y C
 La referencia completa de todas las claves, valores permitidos y requisitos condicionales está en
 [docs/configuration.md](docs/configuration.md).
 
+Para generar matrices conceptuales o con valores manuales destinadas a diapositivas, consulta
+[docs/confusion-demo.md](docs/confusion-demo.md).
+
 ---
 
 ## Documentación del prototipo 0.1

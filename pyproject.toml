@@ -57,6 +57,7 @@ files = [
   "src/allesmusterklassifizierer/splitting.py",
   "src/allesmusterklassifizierer/models.py",
   "src/allesmusterklassifizierer/evaluation.py",
+  "src/allesmusterklassifizierer/metrics/confusion_demo.py",
   "src/allesmusterklassifizierer/artifacts.py",
   "src/allesmusterklassifizierer/experiment.py",
 ]
